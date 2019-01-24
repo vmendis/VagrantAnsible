@@ -1,0 +1,80 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+  
+    
+  tasks:
+  
+  - name: create motd
+    template:
+     src: ./Files/motd
+     dest: /etc/motd
+     mode: 0644
+     owner: root
+     group: root
+  
+
+  # Fancy login messages - from   https://linuxconfig.org/how-to-change-welcome-message-motd-on-ubuntu-18-04-server
+  # If the fancy messages does not come on screen during the first login, log off and log back again.
+  
+  - name: install repository for screenfetch
+    apt_repository:
+      repo: ppa:djcj/screenfetch
+      state: present
+
+  - name: update apt cache
+    apt: 
+      update_cache: yes
+      cache_valid_time: 3600
+  
+  - name: install screenfetch
+    apt:
+      name: screenfetch
+      state: present
+  
+  
+  - name: install inxi
+    apt:
+      name: inxi
+      state: present
+      
+        
+  - name: copy custom file
+    copy:
+      src: ./Files/custom
+      dest: /etc/update-motd.d/99-custom
+      mode: 0755
+      owner: root
+      group: root
+      
+
+  - name: ensure nginx is installed
+    apt: 
+      name: nginx
+      state: present
+
+  - name: write the nginx config file
+    template: 
+      src: ./Files/nginx-default-site.conf 
+      dest: /etc/nginx/sites-available/default.conf
+      mode: 0644
+      owner: root
+      group: root
+      
+    notify: restart nginx
+    
+    
+  - name:  ensure nginx is running  
+    service:
+      name: nginx
+      state: started
+      enabled: yes
+    
+
+  handlers:
+  
+  - name: restart nginx
+    service: 
+      name: nginx
+      state: restarted
